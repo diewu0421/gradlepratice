@@ -1,0 +1,163 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+
+buildscript {
+
+    dependencies {
+        classpath files("libs/plugin-1.0.jar")
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+
+apply plugin: 'com.yunjiglobal.plugin.testplugin'
+
+android {
+    compileSdkVersion 28
+
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.core:core-ktx:1.0.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
+    implementation files('libs/plugin-1.0.jar')
+}
+
+ext.zenglw = "zenglw"
+
+void printDependencies(Task task) {
+    if (task.getName().contains("bundleRelease")) {
+//        println("********************************************************************************************************************")
+    }
+//    println "Name = " + task.getName()
+    task.getTaskDependencies().getDependencies(task).any() {
+        println(">> ${it.path}")
+        if (it != null) {
+
+            printDependencies(it)
+        } else {
+            println("Meiyou zhaodao ")
+
+        }
+    }
+}
+
+// https://mp.weixin.qq.com/s/1xtzkRQzQoO-xYczeAQA7Q
+gradle.taskGraph.whenReady {
+    def task = project.tasks.findByName("uploadArchives")
+    if (task != null) {
+        printDependencies(task)
+    } else {
+    }
+
+}
+
+tasks.whenTaskAdded { task ->
+    if (!"bundleReleaseAar".equals(task.name)) {
+
+        return
+    }
+
+    println "*************************************************************************"
+
+    task.doFirst {
+        println ">> input"
+        task.inputs.files.each {
+
+            println it.absolutePath
+        }
+
+        println ">> output"
+        task.outputs.files.each {
+            println it.absolutePath
+        }
+    }
+    task.doLast {
+        println("llastlastlastlastlastlastlastlastlastlastlastlastlastlastlastlastast")
+        task.outputs.files.each {
+//            file(it.absolutePath)
+            // 将打包后的aar拷贝的桌面
+            // https://www.jianshu.com/p/9833fe83f1a4
+            copy {CopySpec copySpec ->
+                from file(it.absolutePath)
+
+                into "/Users/zlw/Desktop/"
+            }
+        }
+    }
+
+}
+
+
+apply plugin: "maven"
+
+version "1.1.0"
+
+group 'com.yunji.library"'
+
+task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    failOnError false//忽略编码错误
+}
+task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    from androidJavadocs.destinationDir
+    classifier = 'javadoc'
+}
+
+task androidSourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+//同时把源码和注释打包进去
+artifacts {
+    archives androidSourcesJar
+    archives androidJavadocsJar
+}
+
+
+
+artifacts {
+
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url:"file:///Users/zlw/Desktop/libs")
+
+            pom.project {
+                groupId 'com.yunji.library'
+                artifactId = "mylibrary"
+                version "1.0.3"
+            }
+
+        }
+    }
+}
